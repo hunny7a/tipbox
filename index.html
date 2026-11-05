@@ -43,7 +43,13 @@ if(isOv){ // ---------- OBS overlay: index.html#overlay/SECRET ----------
   const ding=new Audio("sound.mp3");
   const beep=()=>{try{const c=new AudioContext(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.value=.2;o.start();o.stop(c.currentTime+.25)}catch(e){}};
   const playDing=()=>new Promise(r=>{ding.currentTime=0;ding.onended=r;ding.onerror=()=>{beep();setTimeout(r,300)};ding.play().catch(()=>{beep();setTimeout(r,300)});setTimeout(r,5000)});
-  const speak=t=>new Promise(r=>{try{const u=new SpeechSynthesisUtterance(t);u.lang=cfg.ttsLang||"hi-IN";u.onend=r;u.onerror=r;speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(r,25000)}catch(e){r()}});
+  const pickVoice=()=>{const vs=speechSynthesis.getVoices(),L=(cfg.ttsLang||"hi-IN").toLowerCase().replace("_","-"),want=(cfg.ttsVoice||"").toLowerCase();
+    const inL=vs.filter(v=>v.lang.toLowerCase().replace("_","-").startsWith(L.slice(0,2))),pool=inL.length?inL:vs;
+    if(want){const m=pool.find(v=>v.name.toLowerCase().includes(want))||vs.find(v=>v.name.toLowerCase().includes(want));if(m)return m}
+    const bad=/hemant|madhur|prabhat|ravi|david|mark|\bmale\b/i;
+    return pool.find(v=>/heera|kalpana|swara|neerja|female|google/i.test(v.name)&&!bad.test(v.name))||pool.find(v=>!bad.test(v.name))||pool[0]};
+  try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
+  const speak=t=>new Promise(r=>{try{const u=new SpeechSynthesisUtterance(t),v=pickVoice();u.lang=cfg.ttsLang||"hi-IN";if(v){u.voice=v;u.lang=v.lang}u.onend=r;u.onerror=r;speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(r,25000)}catch(e){r()}});
   const pump=async()=>{if(busy||!queue.length)return;busy=true;const a=queue.shift();const t0=Date.now();
     $("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;
     await playDing();

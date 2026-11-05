@@ -50,13 +50,17 @@ if(isOv){ // ---------- OBS overlay: index.html#overlay/SECRET ----------
     return pool.find(v=>/heera|kalpana|swara|neerja|female|google/i.test(v.name)&&!bad.test(v.name))||pool.find(v=>!bad.test(v.name))||pool[0]};
   try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
   const speakLocal=t=>new Promise(r=>{try{const u=new SpeechSynthesisUtterance(t),v=pickVoice();u.lang=cfg.ttsLang||"hi-IN";if(v){u.voice=v;u.lang=v.lang}u.onend=r;u.onerror=r;speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(r,25000)}catch(e){r()}});
-  const speakNet=t=>new Promise((res,rej)=>{const a=new Audio("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl="+encodeURIComponent((cfg.ttsLang||"hi-IN").slice(0,2))+"&q="+encodeURIComponent(t.slice(0,190)));a.onended=res;a.onerror=()=>rej(new Error("tts"));a.play().catch(rej);setTimeout(res,25000)});
-  const speak=async t=>{try{await speakNet(t)}catch(e){await speakLocal(t)}};
+  const dbg=location.hash.includes("/debug");let used="";
+  const playUrl=u=>new Promise((res,rej)=>{let d=false;const a=new Audio(u);a.onended=()=>{if(!d){d=true;res()}};a.onerror=()=>{if(!d){d=true;rej(new Error("x"))}};a.play().catch(e=>{if(!d){d=true;rej(e)}});setTimeout(()=>{if(!d){d=true;res()}},25000)});
+  const speak=async t=>{const L=(cfg.ttsLang||"hi-IN").slice(0,2),T=t.slice(0,190),sv=cfg.seVoice||"Aditi";
+    const tries=[["StreamElements "+sv,"https://api.streamelements.com/kappa/v2/speech?voice="+encodeURIComponent(sv)+"&text="+encodeURIComponent(T)],["Google","https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl="+L+"&q="+encodeURIComponent(T)]];
+    for(const [n,u] of tries){try{await playUrl(u);used=n;return}catch(e){}}
+    used="computer voice";await speakLocal(t)};
   const line=a=>{const rs=Math.floor(a.cents/100);return (cfg.ttsLang||"hi-IN").startsWith("hi")?`${a.name} ने ${rs} रुपये भेजे। ${a.msg||""}`:`${a.name} sent ${rs} rupees. ${a.msg||""}`};
   const pump=async()=>{if(busy||!queue.length)return;busy=true;const a=queue.shift();const t0=Date.now();
     $("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;
     await playDing();
-    if(a.cents>=(+cfg.ttsMin||0)*100)await speak(line(a));
+    if(a.cents>=(+cfg.ttsMin||0)*100){await speak(line(a));if(dbg&&$("stage").firstChild)$("stage").firstChild.insertAdjacentHTML("beforeend",`<div class="b" style="font-size:12px;background:#ffeb3b">voice: ${esc(used)}</div>`)}
     await sleep(Math.max((+cfg.holdAfter||3)*1000,(+cfg.minShow||10)*1000-(Date.now()-t0)));
     $("stage").innerHTML="";busy=false;setTimeout(pump,400)};
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};bar()});

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tip</title>
+<style>
+:root{--bg:#13121b;--card:#1d1b2a;--tx:#f1effa;--mut:#9b97b3;--ac:#6c4cf5;--bd:#2d2a40}
+@media(prefers-color-scheme:light){:root{--bg:#f6f5fb;--card:#fff;--tx:#1b1a24;--mut:#6b6880;--bd:#e3e0f0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,"Noto Sans Devanagari",sans-serif}
+body.ov{background:transparent}
+.wrap{max-width:480px;margin:0 auto;padding:16px}.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px}
+h1{font-size:22px;margin:0 0 4px}label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+input,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+button,.btn{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:12px 16px;font:inherit;cursor:pointer;text-decoration:none;display:inline-block}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chips button{background:var(--bd);color:var(--tx);padding:8px 14px}
+.mut{color:var(--mut);font-size:13px}#qr{display:flex;justify-content:center;background:#fff;padding:10px;border-radius:12px;margin:12px 0}
+.alert{border-radius:14px;overflow:hidden;color:#111;width:380px;max-width:92vw;box-shadow:0 8px 30px #0006;animation:in .5s}
+.alert .h{padding:10px 14px;font-weight:700;display:flex;justify-content:space-between}.alert .b{padding:10px 14px;background:#fffe;font-size:18px;word-break:break-word}
+@keyframes in{from{transform:translateY(-30px) scale(.9);opacity:0}}
+#stage{position:fixed;top:20px;left:20px}
+#goalbar{position:fixed;bottom:20px;left:20px;width:380px;max-width:92vw;background:#000a;color:#fff;padding:10px 14px;border-radius:12px;display:none}
+.g{height:14px;background:#fff3;border-radius:99px;overflow:hidden;margin:6px 0 4px}.g i{display:block;height:100%;background:linear-gradient(90deg,#6c4cf5,#e84393);transition:width .8s}
+</style></head><body>
+<div class="wrap" id="app"></div><div id="stage"></div><div id="goalbar"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getDatabase,ref,get,set,onValue,onChildAdded,query,orderByChild,startAt} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+const app=initializeApp({apiKey:"AIzaSyDIIhXiwqektV6FJZyN0E3sehT_mT8qShA",authDomain:"mytipbox-13590.firebaseapp.com",
+databaseURL:"https://mytipbox-13590-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"mytipbox-13590",appId:"1:846336716098:web:ff63d307fc0c40d04fecdb"});
+const db=getDatabase(app),$=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const inr=c=>"₹"+(c/100).toLocaleString("en-IN",{maximumFractionDigits:2});
+const hash=location.hash.slice(1),isOv=hash.startsWith("overlay/");
+let cfg={};
+
+if(isOv){ // ---------- OBS overlay: index.html#overlay/SECRET ----------
+  document.body.classList.add("ov");const K=hash.split("/")[1];
+  let total=0,queue=[],busy=false;
+  const tier=c=>c>=100000?"#ff5252":c>=50000?"#ff9800":c>=20000?"#ffd54f":c>=5000?"#4cd964":"#64b5f6";
+  const bar=()=>{const t=+cfg.goalTarget||1,p=Math.min(100,total/100/t*100);const g=$("goalbar");g.style.display=cfg.goalTitle?"block":"none";
+    g.innerHTML=`<b>${esc(cfg.goalTitle||"")}</b><div class="g"><i style="width:${p}%"></i></div>${inr(total)} / ₹${t.toLocaleString("en-IN")} (${Math.round(p)}%)`};
+  const pump=()=>{if(busy||!queue.length)return;busy=true;const a=queue.shift();
+    $("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;
+    setTimeout(()=>{$("stage").innerHTML="";busy=false;setTimeout(pump,400)},Math.min(12000,5000+a.cents/100*8))};
+  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};bar()});
+  const base=()=>+cfg.goalBase||0;
+  const snap=await get(ref(db,"alerts/"+K));
+  snap.forEach(c=>{const a=c.val();if(a.ts>=base())total+=a.cents});bar();
+  onChildAdded(query(ref(db,"alerts/"+K),orderByChild("ts"),startAt(Date.now())),s=>{const a=s.val();if(a.ts>=base())total+=a.cents;bar();queue.push(a);pump()});
+}else{ // ---------- Tip page ----------
+  $("app").innerHTML=`<div class="card"><h1 id="t">Tip karo</h1><div class="mut">UPI se seedha creator ko</div>
+  <label>Aapka naam</label><input id="n" maxlength="30" placeholder="Rahul">
+  <label>Amount (₹)</label><input id="a" type="number" min="10" max="50000" value="100">
+  <div class="chips">${[50,100,200,500,1000].map(x=>`<button type="button" data-v="${x}">₹${x}</button>`).join("")}</div>
+  <label>Message (stream pe dikhega)</label><textarea id="m" rows="2" maxlength="120" placeholder="Bhai mast stream!"></textarea>
+  <div style="margin-top:14px"><button id="go">Pay karo</button></div><div id="out"></div></div>`;
+  document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>$("a").value=b.dataset.v);
+  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};$("t").textContent=(cfg.name||"Creator")+" ko tip karo";document.title=cfg.name||"Tip"});
+  $("go").onclick=async()=>{
+    const o=$("out");if(!cfg.upi){o.innerHTML='<p class="mut">Setup abhi poora nahi hua.</p>';return}
+    const rs=Math.floor(+$("a").value);if(!(rs>=10&&rs<=50000)){o.innerHTML='<p class="mut">Amount ₹10 se ₹50000 ke beech rakho.</p>';return}
+    $("go").disabled=true;
+    try{
+      const s=await get(query(ref(db,"pending"),orderByChild("ts"),startAt(Date.now()-36e5)));const used=new Set();s.forEach(c=>{used.add(c.val().cents)});
+      let cents,i=0;do{cents=rs*100+1+Math.floor(Math.random()*99);i++}while(used.has(cents)&&i<200);
+      const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      await set(ref(db,"pending/"+id),{name:($("n").value.trim()||"Anonymous").slice(0,30),msg:$("m").value.trim().slice(0,120),cents,ts:Date.now()});
+      const url=`upi://pay?pa=${encodeURIComponent(cfg.upi)}&pn=${encodeURIComponent(cfg.name||"Creator")}&am=${(cents/100).toFixed(2)}&cu=INR&tn=Tip`;
+      o.innerHTML=`<p><b>Exact ${inr(cents)} pay karo</b><br><span class="mut">Paise isliye jude hain ki aapka message aapke payment se match ho sake.</span></p><div id="qr"></div><a class="btn" href="${url}">UPI app kholo</a><p class="mut">Payment ke 5-10 second baad stream pe alert aayega.</p>`;
+      new QRCode($("qr"),{text:url,width:190,height:190});
+    }catch(e){o.innerHTML='<p class="mut">Kuch gadbad hui, dobara try karo.</p>'}
+    $("go").disabled=false};
+}
+</script></body></html>

@@ -48,7 +48,7 @@ if(isOv){ // ---------- OBS overlay: index.html#overlay/SECRET ----------
     $("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;
     await playDing();
     if(a.cents>=(+cfg.ttsMin||0)*100)await speak(`${a.name} ne ${Math.floor(a.cents/100)} rupaye bheje. ${a.msg||""}`);
-    await sleep(Math.max(1500,5000-(Date.now()-t0)));
+    await sleep(Math.max((+cfg.holdAfter||3)*1000,(+cfg.minShow||10)*1000-(Date.now()-t0)));
     $("stage").innerHTML="";busy=false;setTimeout(pump,400)};
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};bar()});
   const base=()=>+cfg.goalBase||0;

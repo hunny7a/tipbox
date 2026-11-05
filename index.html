@@ -33,11 +33,13 @@ const inr=c=>"₹"+(c/100).toLocaleString("en-IN",{maximumFractionDigits:2});
 const hash=location.hash.slice(1),isOv=hash.startsWith("overlay/");
 let cfg={};
 
-if(isOv){ // ---------- OBS overlay: index.html#overlay/SECRET ----------
-  document.body.classList.add("ov");const K=hash.split("/")[1];
+if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceonly (Chrome tab) ----------
+  const parts=hash.split("/"),K=parts[1],mode=parts[2]||"",noVoice=mode==="novoice",voiceOnly=mode==="voiceonly";
+  if(!voiceOnly)document.body.classList.add("ov");
+  if(voiceOnly)$("app").innerHTML=`<div class="card"><h1>🔊 Voice tab</h1><p class="mut">Ye tab sirf awaaz bolta hai. Is page pe <b>ek baar click</b> karo, phir ise minimize kar do (band mat karna). OBS mein Desktop Audio on hona chahiye.</p></div>`;
   let total=0,queue=[],busy=false;
   const tier=c=>c>=100000?"#ff5252":c>=50000?"#ff9800":c>=20000?"#ffd54f":c>=5000?"#4cd964":"#64b5f6";
-  const bar=()=>{const t=+cfg.goalTarget||1,p=Math.min(100,total/100/t*100);const g=$("goalbar");g.style.display=cfg.goalTitle?"block":"none";
+  const bar=()=>{const t=+cfg.goalTarget||1,p=Math.min(100,total/100/t*100);const g=$("goalbar");g.style.display=cfg.goalTitle&&!voiceOnly?"block":"none";
     g.innerHTML=`<b>${esc(cfg.goalTitle||"")}</b><div class="g"><i style="width:${p}%"></i></div>${inr(total)} / ₹${t.toLocaleString("en-IN")} (${Math.round(p)}%)`};
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const ding=new Audio("sound.mp3");
@@ -49,19 +51,14 @@ if(isOv){ // ---------- OBS overlay: index.html#overlay/SECRET ----------
     const bad=/hemant|madhur|prabhat|ravi|david|mark|\bmale\b/i;
     return pool.find(v=>/heera|kalpana|swara|neerja|female|google/i.test(v.name)&&!bad.test(v.name))||pool.find(v=>!bad.test(v.name))||pool[0]};
   try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
-  const speakLocal=t=>new Promise(r=>{try{const u=new SpeechSynthesisUtterance(t),v=pickVoice();u.lang=cfg.ttsLang||"hi-IN";if(v){u.voice=v;u.lang=v.lang}u.onend=r;u.onerror=r;speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(r,25000)}catch(e){r()}});
-  const dbg=location.hash.includes("/debug");let used="";
-  const playUrl=u=>new Promise((res,rej)=>{let d=false;const a=new Audio(u);a.onended=()=>{if(!d){d=true;res()}};a.onerror=()=>{if(!d){d=true;rej(new Error("x"))}};a.play().catch(e=>{if(!d){d=true;rej(e)}});setTimeout(()=>{if(!d){d=true;res()}},25000)});
-  const speak=async t=>{const L=(cfg.ttsLang||"hi-IN").slice(0,2),T=t.slice(0,190),sv=cfg.seVoice||"Aditi";
-    const tries=[["StreamElements "+sv,"https://api.streamelements.com/kappa/v2/speech?voice="+encodeURIComponent(sv)+"&text="+encodeURIComponent(T)],["Google","https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl="+L+"&q="+encodeURIComponent(T)]];
-    for(const [n,u] of tries){try{await playUrl(u);used=n;return}catch(e){}}
-    used="computer voice";await speakLocal(t)};
+  const speak=t=>new Promise(r=>{try{const u=new SpeechSynthesisUtterance(t),v=pickVoice();u.lang=cfg.ttsLang||"hi-IN";if(v){u.voice=v;u.lang=v.lang}u.onend=r;u.onerror=r;speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(r,25000)}catch(e){r()}});
   const line=a=>{const rs=Math.floor(a.cents/100);return (cfg.ttsLang||"hi-IN").startsWith("hi")?`${a.name} ने ${rs} रुपये भेजे। ${a.msg||""}`:`${a.name} sent ${rs} rupees. ${a.msg||""}`};
-  const pump=async()=>{if(busy||!queue.length)return;busy=true;const a=queue.shift();const t0=Date.now();
-    $("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;
-    await playDing();
-    if(a.cents>=(+cfg.ttsMin||0)*100){await speak(line(a));if(dbg&&$("stage").firstChild)$("stage").firstChild.insertAdjacentHTML("beforeend",`<div class="b" style="font-size:12px;background:#ffeb3b">voice: ${esc(used)}</div>`)}
-    await sleep(Math.max((+cfg.holdAfter||3)*1000,(+cfg.minShow||10)*1000-(Date.now()-t0)));
+  const pump=async()=>{if(busy||!queue.length)return;busy=true;const a=queue.shift();const t0=Date.now(),say=a.cents>=(+cfg.ttsMin||0)*100;
+    if(!voiceOnly){$("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;await playDing()}
+    else await sleep((+cfg.voiceDelay||5)*1000);
+    if(say&&!noVoice)await speak(line(a));
+    const minMs=(+cfg.minShow||10)*1000-(Date.now()-t0);
+    await sleep(voiceOnly?Math.max(0,minMs):Math.max((+cfg.holdAfter||3)*1000,minMs));
     $("stage").innerHTML="";busy=false;setTimeout(pump,400)};
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};bar()});
   const base=()=>+cfg.goalBase||0;

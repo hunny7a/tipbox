@@ -68,7 +68,7 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
 }else{ // ---------- Tip page ----------
   $("app").innerHTML=`<div class="card"><h1 id="t">Tip karo</h1><div class="mut">UPI se seedha creator ko</div>
   <label>Aapka naam</label><input id="n" maxlength="30" placeholder="Rahul">
-  <label>Amount (₹)</label><input id="a" type="number" min="10" max="50000" value="100">
+  <label>Amount (₹)</label><input id="a" type="number" min="1" max="50000" value="100">
   <div class="chips">${[50,100,200,500,1000].map(x=>`<button type="button" data-v="${x}">₹${x}</button>`).join("")}</div>
   <label>Message (stream pe dikhega)</label><textarea id="m" rows="2" maxlength="120" placeholder="Bhai mast stream!"></textarea>
   <div style="margin-top:14px"><button id="go">Pay karo</button></div><div id="out"></div></div>`;
@@ -76,7 +76,7 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};$("t").textContent=(cfg.name||"Creator")+" ko tip karo";document.title=cfg.name||"Tip"});
   $("go").onclick=async()=>{
     const o=$("out");if(!cfg.upi){o.innerHTML='<p class="mut">Setup abhi poora nahi hua.</p>';return}
-    const rs=Math.floor(+$("a").value);if(!(rs>=10&&rs<=50000)){o.innerHTML='<p class="mut">Amount ₹10 se ₹50000 ke beech rakho.</p>';return}
+    const mn=Math.max(1,+cfg.minRs||10),rs=Math.floor(+$("a").value);if(!(rs>=mn&&rs<=50000)){o.innerHTML=`<p class="mut">Amount ₹${mn} se ₹50000 ke beech rakho.</p>`;return}
     $("go").disabled=true;
     try{
       const s=await get(query(ref(db,"pending"),orderByChild("ts"),startAt(Date.now()-36e5)));const used=new Set();s.forEach(c=>{used.add(c.val().cents)});
@@ -84,7 +84,13 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
       const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       await set(ref(db,"pending/"+id),{name:($("n").value.trim()||"Anonymous").slice(0,30),msg:$("m").value.trim().slice(0,120),cents,ts:Date.now()});
       const url=`upi://pay?pa=${encodeURIComponent(cfg.upi)}&pn=${encodeURIComponent(cfg.name||"Creator")}&am=${(cents/100).toFixed(2)}&cu=INR&tn=Tip`;
-      o.innerHTML=`<p><b>Exact ${inr(cents)} pay karo</b><br><span class="mut">Paise isliye jude hain ki aapka message aapke payment se match ho sake.</span></p><div id="qr"></div><a class="btn" href="${url}">UPI app kholo</a><p class="mut">Payment ke 5-10 second baad stream pe alert aayega.</p>`;
+      o.innerHTML=`<p><b>Exact ${inr(cents)} pay karo</b><br><span class="mut">Paise isliye jude hain ki aapka message aapke payment se match ho sake.</span></p>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="cu">UPI ID copy karo</button><button type="button" id="ca">Amount copy karo</button></div>
+<p class="mut">Apne UPI app mein <b>UPI ID pe pay karo</b> chuno, ID paste karo aur exact amount <b>${(cents/100).toFixed(2)}</b> likho.</p>
+<div id="qr"></div><p class="mut">Ya ye QR kisi doosre phone ke UPI app se scan karo. Payment ke 5-10 second baad stream pe alert aayega.</p>
+<p class="mut"><a href="${url}" style="color:inherit">UPI app seedha kholo</a> (kuch apps ye payment rok dete hain)</p>`;
+      const cp=(t,b)=>{try{navigator.clipboard.writeText(t);b.textContent="Copy ho gaya ✓"}catch(e){prompt("Copy karo:",t)}};
+      $("cu").onclick=e=>cp(cfg.upi,e.target);$("ca").onclick=e=>cp((cents/100).toFixed(2),e.target);
       new QRCode($("qr"),{text:url,width:190,height:190});
     }catch(e){o.innerHTML='<p class="mut">Kuch gadbad hui, dobara try karo.</p>'}
     $("go").disabled=false};

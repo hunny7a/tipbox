@@ -71,9 +71,15 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
   <label>Amount (₹)</label><input id="a" type="number" min="1" max="50000" value="100">
   <div class="chips">${[50,100,200,500,1000].map(x=>`<button type="button" data-v="${x}">₹${x}</button>`).join("")}</div>
   <label>Message (stream pe dikhega)</label><textarea id="m" rows="2" maxlength="120" placeholder="Bhai mast stream!"></textarea>
-  <div style="margin-top:14px"><button id="go">Pay karo</button></div><div id="out"></div></div>`;
+  <div style="margin-top:14px"><button id="go">Pay karo</button></div><div id="out"></div></div><div id="tut" style="margin-top:12px"></div>`;
   document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>$("a").value=b.dataset.v);
-  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};$("t").textContent=(cfg.name||"Creator")+" ko tip karo";document.title=cfg.name||"Tip"});
+  const tut=()=>{const v=String(cfg.tutorial||"").trim(),box=$("tut");if(!v){box.innerHTML="";return}
+    box.innerHTML=`<div class="card"><button type="button" id="tb" style="width:100%">▶ Kaise tip karein? (video dekho)</button><div id="tv" style="margin-top:12px"></div></div>`;
+    $("tb").onclick=()=>{const m=v.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)||v.match(/^([\w-]{11})$/);
+      if(/\.mp4$/i.test(v))$("tv").innerHTML=`<video src="${esc(v)}" controls playsinline autoplay style="width:100%;border-radius:12px"></video>`;
+      else if(m)$("tv").innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0" style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+      $("tb").style.display="none"}};
+  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};$("t").textContent=(cfg.name||"Creator")+" ko tip karo";document.title=cfg.name||"Tip";tut()});
   $("go").onclick=async()=>{
     const o=$("out");if(!cfg.upi){o.innerHTML='<p class="mut">Setup abhi poora nahi hua.</p>';return}
     const mn=Math.max(1,+cfg.minRs||10),rs=Math.floor(+$("a").value);if(!(rs>=mn&&rs<=50000)){o.innerHTML=`<p class="mut">Amount ₹${mn} se ₹50000 ke beech rakho.</p>`;return}

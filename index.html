@@ -13,14 +13,15 @@ input,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(-
 button,.btn{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:12px 16px;font:inherit;cursor:pointer;text-decoration:none;display:inline-block}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chips button{background:var(--bd);color:var(--tx);padding:8px 14px}
 .mut{color:var(--mut);font-size:13px}#qr{display:flex;justify-content:center;background:#fff;padding:10px;border-radius:12px;margin:12px 0}
-.alert{border-radius:14px;overflow:hidden;color:#111;width:380px;max-width:92vw;box-shadow:0 8px 30px #0006;animation:in .5s}
+.alert{border-radius:14px;overflow:hidden;color:#111;width:380px;zoom:var(--k,1.75);box-shadow:0 8px 30px #0006;animation:in .5s}
 .alert .h{padding:10px 14px;font-weight:700;display:flex;justify-content:space-between}.alert .b{padding:10px 14px;background:#fffe;font-size:18px;word-break:break-word}
 @keyframes in{from{transform:translateY(-30px) scale(.9);opacity:0}}
-#stage{position:fixed;top:20px;left:20px}
-#goalbar{position:fixed;bottom:20px;left:20px;width:380px;max-width:92vw;background:#000a;color:#fff;padding:10px 14px;border-radius:12px;display:none}
+#ovr{position:fixed;top:165px;bottom:24px;right:24px;width:665px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+#stage{position:static}
+#goalbar{position:static;width:380px;zoom:var(--k,1.75);background:#000a;color:#fff;padding:10px 14px;border-radius:12px;display:none}
 .g{height:14px;background:#fff3;border-radius:99px;overflow:hidden;margin:6px 0 4px}.g i{display:block;height:100%;background:linear-gradient(90deg,#6c4cf5,#e84393);transition:width .8s}
 </style></head><body>
-<div class="wrap" id="app"></div><div id="stage"></div><div id="goalbar"></div>
+<div class="wrap" id="app"></div><div id="ovr"><div id="stage"></div><div id="goalbar"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -60,7 +61,11 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
     const minMs=(+cfg.minShow||10)*1000-(Date.now()-t0);
     await sleep(voiceOnly?Math.max(0,minMs):Math.max((+cfg.holdAfter||3)*1000,minMs));
     $("stage").innerHTML="";busy=false;setTimeout(pump,400)};
-  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};bar()});
+  const layout=()=>{const k=+cfg.ovScale||1.75,o=$("ovr"),m=((cfg.ovMargin!=null)?+cfg.ovMargin:24)+"px";
+    document.documentElement.style.setProperty("--k",k);o.style.width=(380*k)+"px";
+    o.style.top=((cfg.ovTop!=null)?+cfg.ovTop:165)+"px";o.style.bottom=((cfg.ovBottom!=null)?+cfg.ovBottom:24)+"px";
+    if(cfg.ovSide==="left"){o.style.left=m;o.style.right="auto"}else{o.style.right=m;o.style.left="auto"}};
+  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};layout();bar()});
   const base=()=>+cfg.goalBase||0;
   const snap=await get(ref(db,"alerts/"+K));
   snap.forEach(c=>{const a=c.val();if(a.ts>=base())total+=a.cents});bar();

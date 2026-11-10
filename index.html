@@ -76,7 +76,7 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
   <label>Amount (₹)</label><input id="a" type="number" min="1" max="50000" value="100">
   <div class="chips">${[50,100,200,500,1000].map(x=>`<button type="button" data-v="${x}">₹${x}</button>`).join("")}</div>
   <label>Message (stream pe dikhega)</label><textarea id="m" rows="2" maxlength="120" placeholder="Bhai mast stream!"></textarea>
-  <div style="margin-top:14px"><button id="go">Pay karo</button></div><div id="out"></div></div><div id="tut" style="margin-top:12px"></div>`;
+  <div style="margin-top:14px"><button id="go">Pay karo</button></div><p class="mut">Pay karo dabate hi aapka UPI app khul jaayega. Na khule to neeche options aayenge, ya <b>"Kaise tip karein?"</b> video dekho.</p><div id="out"></div></div><div id="tut" style="margin-top:12px"></div>`;
   document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>$("a").value=b.dataset.v);
   const tut=()=>{const v=String(cfg.tutorial||"").trim(),box=$("tut");if(!v){box.innerHTML="";return}
     box.innerHTML=`<div class="card"><button type="button" id="tb" style="width:100%">▶ Kaise tip karein? (video dekho)</button><div id="tv" style="margin-top:12px"></div></div>`;
@@ -95,14 +95,19 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
       const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       await set(ref(db,"pending/"+id),{name:($("n").value.trim()||"Anonymous").slice(0,30),msg:$("m").value.trim().slice(0,120),cents,ts:Date.now()});
       const url=`upi://pay?pa=${encodeURIComponent(cfg.upi)}&pn=${encodeURIComponent(cfg.name||"Creator")}&am=${(cents/100).toFixed(2)}&cu=INR&tn=Tip`;
+      const am=(cents/100).toFixed(2);
+      const vl=cfg.tutorial?' Ya <a href="#tut" id="vl" style="color:inherit"><b>Kaise tip karein? video dekho</b></a>.':'';
       o.innerHTML=`<p><b>Exact ${inr(cents)} pay karo</b><br><span class="mut">Paise isliye jude hain ki aapka message aapke payment se match ho sake.</span></p>
+<a class="btn" href="${url}" style="display:block;text-align:center;font-size:18px">UPI app kholo aur pay karo</a>
+<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bd)">
+<p class="mut"><b>Button kaam na kare to:</b> UPI ID copy karo, apne UPI app mein <b>UPI ID pe pay karo</b> chuno aur exact amount <b>${am}</b> likho. Ya neeche ka QR scan karo.${vl}</p>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="cu">UPI ID copy karo</button><button type="button" id="ca">Amount copy karo</button></div>
-<p class="mut">Apne UPI app mein <b>UPI ID pe pay karo</b> chuno, ID paste karo aur exact amount <b>${(cents/100).toFixed(2)}</b> likho.</p>
-<div id="qr"></div><p class="mut">Ya ye QR kisi doosre phone ke UPI app se scan karo. Payment ke 5-10 second baad stream pe alert aayega.</p>
-<p class="mut"><a href="${url}" style="color:inherit">UPI app seedha kholo</a> (kuch apps ye payment rok dete hain)</p>`;
-      const cp=(t,b)=>{try{navigator.clipboard.writeText(t);b.textContent="Copy ho gaya ✓"}catch(e){prompt("Copy karo:",t)}};
-      $("cu").onclick=e=>cp(cfg.upi,e.target);$("ca").onclick=e=>cp((cents/100).toFixed(2),e.target);
+<div id="qr"></div><p class="mut">Payment ke 5-10 second baad stream pe alert aayega.</p></div>`;
+      const cp=(t,bt)=>{try{navigator.clipboard.writeText(t);bt.textContent="Copy ho gaya ✓"}catch(e){prompt("Copy karo:",t)}};
+      $("cu").onclick=e=>cp(cfg.upi,e.target);$("ca").onclick=e=>cp(am,e.target);
+      const vlk=$("vl");if(vlk)vlk.onclick=e=>{e.preventDefault();const tb=$("tb");if(tb)tb.click();$("tut").scrollIntoView({behavior:"smooth"})};
       new QRCode($("qr"),{text:url,width:190,height:190});
+      if(/Android|iPhone|iPad/i.test(navigator.userAgent))location.href=url;
     }catch(e){o.innerHTML='<p class="mut">Kuch gadbad hui, dobara try karo.</p>'}
     $("go").disabled=false};
 }

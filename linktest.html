@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UPI link test</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:#13121b;color:#f1effa}
+.w{max-width:480px;margin:0 auto;padding:16px}
+a{display:block;margin:10px 0;padding:14px;border-radius:12px;background:#6c4cf5;color:#fff;text-decoration:none;font-size:17px}
+h2{font-size:15px;color:#9b97b3;margin:22px 0 4px}p{color:#9b97b3;font-size:13px}
+</style></head><body><div class="w">
+<h1>UPI link test</h1>
+<p>Har button dabao aur dekho: payment screen amount (₹10.40) ke saath khuli, ya "declined" aaya. Neeche result likh lo.</p>
+<div id="b"></div>
+<script>
+const pa="hunnybvg@axl",pn="BAT V GAMING",am="10.40",tn="Tip";
+const q="pa="+encodeURIComponent(pa)+"&pn="+encodeURIComponent(pn)+"&am="+am+"&cu=INR&tn="+tn;
+const it=(pkg)=>"intent://pay?"+q+"#Intent;scheme=upi;package="+pkg+";end";
+const groups=[
+ ["A. Normal link (pehle jaisa)",[["upi://pay (koi bhi app)","upi://pay?"+q]]],
+ ["B. App ka apna link",[["PhonePe","phonepe://pay?"+q],["Google Pay","tez://upi/pay?"+q],["Paytm","paytmmp://pay?"+q]]],
+ ["C. Android intent (app fix)",[["PhonePe","PHONEPE"],["Google Pay","GPAY"],["Paytm","PAYTM"]]]
+];
+const pk={PHONEPE:"com.phonepe.app",GPAY:"com.google.android.apps.nbu.paisa.user",PAYTM:"net.one97.paytm"};
+let h="";
+for(const [t,l] of groups){h+="<h2>"+t+"</h2>";for(const [n,u] of l){const href=pk[u]?it(pk[u]):u;h+='<a href="'+href+'">'+n+"</a>"}}
+document.getElementById("b").innerHTML=h;
+</script></div></body></html>

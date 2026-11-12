@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f4f5fa;color:#1a1c2e}.w{max-width:760px;margin:0 auto;padding:18px}
+.c{background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 6px 24px rgba(30,30,80,.07)}h2{margin:0 0 10px;font-size:16px}
+label{display:block;font-size:12px;color:#6a6f87;margin:10px 0 4px}input{width:100%;padding:10px;border:1px solid #dfe2ee;border-radius:10px;font:inherit}
+button{background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer;margin:6px 6px 0 0}button.g{background:#e8eaf6;color:#222}button.r{background:#dc2626}
+.bar{height:14px;background:#e4e6f0;border-radius:9px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:linear-gradient(90deg,#4f46e5,#ec4899)}
+.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid #eef0f6;font-size:14px}.m{color:#6a6f87;font-size:13px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}code{word-break:break-all;font-size:12px}</style></head><body><div class="w">
+<div class="c"><h2>TipBox Dashboard</h2><div id="st" class="m">Sign in karo.</div><button id="si">Google se sign in</button><button class="g" id="so" style="display:none">Sign out</button></div>
+<div id="ap" style="display:none">
+<div class="c"><h2>Goal</h2><b id="gt"></b><div class="bar"><i id="gb"></i></div><div id="gs" class="m"></div><button id="ng" class="g">Naya goal shuru karo (counter 0)</button></div>
+<div class="c"><h2>Settings</h2><div class="g2"><div><label>Channel naam</label><input id="f_name"></div><div><label>UPI ID</label><input id="f_upi"></div>
+<div><label>Goal ka naam</label><input id="f_goalTitle"></div><div><label>Goal target (₹)</label><input id="f_goalTarget" type="number"></div>
+<div><label>Minimum tip (₹)</label><input id="f_minRs" type="number"></div><div><label>Tutorial video (file ya YouTube link)</label><input id="f_tutorial"></div></div>
+<h2 style="margin-top:18px">Overlay, voice aur website theme</h2><div class="g2" id="adv"></div><label>Overlay secret key (OBS link ke liye)</label><input id="f_key"><button id="sv">Save</button><span id="ok" class="m"></span></div>
+<div class="c"><h2>OBS aur links</h2><div class="m">Overlay (OBS Browser Source):</div><code id="ou"></code><br><button class="g" id="co">Copy overlay link</button><button class="g" id="ct">Copy tip page link</button>
+<br><button class="g" id="ts">Test alert bhejo</button><button class="r" id="da">Saare alerts delete karo</button></div>
+<div class="c"><h2>Recent tips</h2><div id="rt"></div></div></div></div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getDatabase,ref,set,update,remove,onValue} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+const app=initializeApp({apiKey:"AIzaSyDIIhXiwqektV6FJZyN0E3sehT_mT8qShA",authDomain:"mytipbox-13590.firebaseapp.com",databaseURL:"https://mytipbox-13590-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"mytipbox-13590",appId:"1:846336716098:web:ff63d307fc0c40d04fecdb"});
+const auth=getAuth(app),db=getDatabase(app),$=i=>document.getElementById(i);let cfg={},key="",all=[];
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));const inr=c=>"₹"+(c/100).toLocaleString("en-IN",{maximumFractionDigits:2});
+$("si").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>$("st").textContent="Sign in error: "+e.code);$("so").onclick=()=>signOut(auth);
+const NUM=["goalTarget","minRs","ovScale","ovTop","ovBottom","ovMargin","ttsMin","minShow","holdAfter","voiceDelay"];
+const AD=[["ovScale","Overlay size (1.75)"],["ovTop","Upar se gap px (165)"],["ovBottom","Neeche se gap px (24)"],["ovMargin","Side gap px (24)"],["ovSide","Overlay side",["right","left"]],["ttsMin","Voice minimum ₹ (0)"],["minShow","Alert kam se kam sec (10)"],["holdAfter","Voice ke baad sec (3)"],["voiceDelay","Voice delay sec (5)"],["ttsLang","Voice bhasha (hi-IN)"],["themeMode","Website theme",["auto","light","dark"]],["accent","Website rang","color"]];
+$("adv").innerHTML=AD.map(([k,l,o])=>{const c=Array.isArray(o)?'<select id="f_'+k+'" data-d="'+o[0]+'" style="width:100%;padding:10px;border:1px solid #dfe2ee;border-radius:10px">'+o.map(x=>"<option>"+x+"</option>").join("")+"</select>":'<input id="f_'+k+'" type="'+(o||(NUM.includes(k)?"number":"text"))+'" step="any"'+(k==="accent"?' data-d="#4f46e5"':"")+">";return "<div><label>"+l+"</label>"+c+"</div>"}).join("");
+const F=["name","upi","goalTitle","goalTarget","minRs","tutorial",...AD.map(a=>a[0])];
+function draw(){const base=+cfg.goalBase||0,raised=all.filter(a=>a.ts>=base).reduce((x,a)=>x+a.cents,0),t=+cfg.goalTarget||1,p=Math.min(100,raised/100/t*100);
+ $("gt").textContent=cfg.goalTitle||"Goal set nahi";$("gb").style.width=p+"%";$("gs").textContent=inr(raised)+" / ₹"+t.toLocaleString("en-IN")+" ("+Math.round(p)+"%)";
+ const u=new URL("index.html#overlay/"+key+"/novoice",location.href).href;$("ou").textContent=key?u:"Pehle secret key save karo";$("co").onclick=()=>navigator.clipboard.writeText(u);
+ $("ct").onclick=()=>navigator.clipboard.writeText(new URL("index.html",location.href).href);
+ $("rt").innerHTML=all.sort((a,b)=>b.ts-a.ts).slice(0,25).map(a=>`<div class="row"><span><b>${esc(a.name||"")}</b> ${esc(a.msg||"")}</span><span>${inr(a.cents)} <span class="m">${new Date(a.ts).toLocaleString("en-IN")}</span></span></div>`).join("")||'<div class="m">Abhi koi tip nahi.</div>'}
+onAuthStateChanged(auth,u=>{$("si").style.display=u?"none":"";$("so").style.display=u?"":"none";$("ap").style.display=u?"block":"none";if(!u)return;
+ $("st").innerHTML="Signed in. Aapka UID: <code>"+u.uid+"</code><br>Agar data nahi dikh raha, ye UID Firebase Rules mein OWNER_UID ki jagah daalo.";
+ if(u.photoURL)update(ref(db,"pub/cfg"),{photo:u.photoURL}).catch(()=>{});
+ onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};F.forEach(k=>{if(document.activeElement.id!=="f_"+k)$("f_"+k).value=cfg[k]??$("f_"+k).dataset.d??""});draw()});
+ onValue(ref(db,"owner/key"),s=>{key=s.val()||"";if(document.activeElement.id!=="f_key")$("f_key").value=key;draw()});
+ onValue(ref(db,"alerts"),s=>{all=[];s.forEach(k=>k.forEach(c=>{all.push(c.val())}));draw()},()=>{})});
+$("sv").onclick=async()=>{const d={};F.forEach(k=>{const v=$("f_"+k).value.trim();d[k]=v===""?null:(NUM.includes(k)?+v:v)});
+ try{await update(ref(db,"pub/cfg"),d);await set(ref(db,"owner/key"),$("f_key").value.trim());$("ok").textContent="Save ho gaya ✓"}catch(e){$("ok").textContent="Error: "+e.code}};
+$("ng").onclick=()=>confirm("Goal counter 0 karein?")&&update(ref(db,"pub/cfg"),{goalBase:Date.now()});
+$("ts").onclick=()=>key&&set(ref(db,"alerts/"+key+"/test"+Date.now()),{name:"Test",msg:"Dashboard se test",cents:5037,ts:Date.now()});
+$("da").onclick=()=>confirm("Saare alerts (goal ka record) delete ho jaayenge. Pakka?")&&remove(ref(db,"alerts"));
+</script></body></html>

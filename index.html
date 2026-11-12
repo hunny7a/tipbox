@@ -34,12 +34,17 @@ body.pg{background:#f4f5fa;color:#1a1c2e;--card:#fff;--bd:#e4e6f0;--mut:#6a6f87;
 body.pg[data-th=light]{background:#f4f5fa;color:#1a1c2e;--card:#fff;--bd:#e4e6f0;--mut:#6a6f87;--bg:#fff;--tx:#1a1c2e}
 body.pg[data-th=dark]{background:#0f1020;color:#eceefb;--card:#171933;--bd:#2a2d52;--mut:#9aa0c3;--bg:#0f1020;--tx:#eceefb}
 body.pg[data-th=light] .timer{background:#eef0ff;color:#3730a3}body.pg[data-th=dark] .timer{background:#23265a;color:#c7caff}
+body.pg{background:radial-gradient(900px 500px at 50% -5%,#0f766e66,transparent),#070b14;color:#e8f1f2;--card:#0e1624cc;--bd:#1f2c3f;--mut:#8aa0b2;--ac:#14b8a6;--bg:#0a1220;--tx:#e8f1f2}
+#pt{position:fixed;inset:0;z-index:0;pointer-events:none}.pg .wrap{position:relative;z-index:1}
+.hd{text-align:center;margin:8px 0 18px}.av{width:92px;height:92px;border-radius:50%;margin:0 auto 10px;display:grid;place-items:center;font-size:34px;font-weight:700;color:#fff;background:var(--ac);box-shadow:0 0 0 4px #ffffff14,0 0 40px var(--ac);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}.hd h1{font-size:26px;margin:0}.hd p{color:var(--mut);margin:6px 0 0;font-size:14px}
+.pg .card{backdrop-filter:blur(10px)}.fd{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--bd);font-size:14px}.fd span{overflow-wrap:anywhere}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="ovr"><div id="stage"></div><div id="goalbar"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {getDatabase,ref,get,set,onValue,onChildAdded,query,orderByChild,startAt} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {getDatabase,ref,get,set,onValue,onChildAdded,query,orderByChild,startAt,limitToLast} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 const app=initializeApp({apiKey:"AIzaSyDIIhXiwqektV6FJZyN0E3sehT_mT8qShA",authDomain:"mytipbox-13590.firebaseapp.com",
 databaseURL:"https://mytipbox-13590-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"mytipbox-13590",appId:"1:846336716098:web:ff63d307fc0c40d04fecdb"});
 const db=getDatabase(app),$=id=>document.getElementById(id);
@@ -67,7 +72,8 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
     return pool.find(v=>/heera|kalpana|swara|neerja|female|google/i.test(v.name)&&!bad.test(v.name))||pool.find(v=>!bad.test(v.name))||pool[0]};
   try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
   const speak=t=>new Promise(r=>{try{const u=new SpeechSynthesisUtterance(t),v=pickVoice();u.lang=cfg.ttsLang||"hi-IN";if(v){u.voice=v;u.lang=v.lang}u.onend=r;u.onerror=r;speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(r,25000)}catch(e){r()}});
-  const line=a=>{const rs=Math.floor(a.cents/100);return (cfg.ttsLang||"hi-IN").startsWith("hi")?`${a.name} ने ${rs} रुपये भेजे। ${a.msg||""}`:`${a.name} sent ${rs} rupees. ${a.msg||""}`};
+  const cl=t=>String(t||"").replace(/[\u0000-\u001f\u007f<>]/g," ").replace(/(.)\1{5,}/g,"$1$1$1").slice(0,120);
+  const line=a=>{a={...a,name:cl(a.name).slice(0,30),msg:cl(a.msg)};const rs=Math.floor(a.cents/100);return (cfg.ttsLang||"hi-IN").startsWith("hi")?`${a.name} ने ${rs} रुपये भेजे। ${a.msg||""}`:`${a.name} sent ${rs} rupees. ${a.msg||""}`};
   const pump=async()=>{if(busy||!queue.length)return;busy=true;const a=queue.shift();const t0=Date.now(),say=a.cents>=(+cfg.ttsMin||0)*100;
     if(!voiceOnly){$("stage").innerHTML=`<div class="alert"><div class="h" style="background:${tier(a.cents)}"><span>${esc(a.name)}</span><span>${inr(a.cents)}</span></div>${a.msg?`<div class="b">${esc(a.msg)}</div>`:""}</div>`;await playDing()}
     else await sleep((+cfg.voiceDelay||5)*1000);
@@ -80,51 +86,60 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
     o.style.top=((cfg.ovTop!=null)?+cfg.ovTop:165)+"px";o.style.bottom=((cfg.ovBottom!=null)?+cfg.ovBottom:24)+"px";
     if(cfg.ovSide==="left"){o.style.left=m;o.style.right="auto"}else{o.style.right=m;o.style.left="auto"}};
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};layout();bar()});
-  const base=()=>+cfg.goalBase||0;
+  const base=()=>+cfg.goalBase||0,seen=new Set(),cnt=a=>a.ts>=base()&&a.status!=="rejected"&&a.status!=="test";
   const snap=await get(ref(db,"alerts/"+K));
-  snap.forEach(c=>{const a=c.val();if(a.ts>=base())total+=a.cents});bar();
-  onChildAdded(query(ref(db,"alerts/"+K),orderByChild("ts"),startAt(Date.now())),s=>{const a=s.val();if(a.ts>=base())total+=a.cents;bar();queue.push(a);pump()});
+  snap.forEach(c=>{const a=c.val();if(cnt(a))total+=a.cents});bar();
+  onChildAdded(query(ref(db,"alerts/"+K),orderByChild("ts"),startAt(Date.now())),s=>{const a=s.val();if(seen.has(s.key))return;seen.add(s.key);if(cnt(a))total+=a.cents;bar();queue.push(a);pump()});
 }else{ // ---------- Tip page ----------
-  const WIN=10*60*1000;document.body.classList.add("pg");
-  $("app").innerHTML=`<div class="top"><div class="logo" id="lg">T</div><div><b id="t" style="font-size:18px">Tip karo</b><div class="mut">Live stream ko support karo</div></div></div>
-  <div class="card"><div id="fm"><label>Aapka naam</label><input id="n" maxlength="30" placeholder="Stream pe dikhega">
-  <label>Amount (₹)</label><input id="a" type="number" min="1" max="50000" value="100" inputmode="numeric">
+  const WIN=10*60*1000;document.body.classList.add("pg");let AC="#14b8a6";
+  const cv=document.createElement("canvas");cv.id="pt";document.body.prepend(cv);const cx=cv.getContext("2d"),P=[];
+  const rz=()=>{cv.width=innerWidth;cv.height=innerHeight};addEventListener("resize",rz);rz();
+  for(let i=0;i<40;i++)P.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:1+Math.random()*2.2,v:.15+Math.random()*.45,o:.15+Math.random()*.45});
+  (function f(){cx.clearRect(0,0,cv.width,cv.height);if(!document.hidden)P.forEach(p=>{p.y-=p.v;if(p.y<-5){p.y=cv.height+5;p.x=Math.random()*cv.width}cx.globalAlpha=p.o;cx.fillStyle=AC;cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fill()});requestAnimationFrame(f)})();
+  $("app").innerHTML=`<div class="hd"><div class="av" id="lg">T</div><h1 id="t">Tip karo</h1><p id="wl"></p></div>
+  <div class="card"><div id="fm"><label>Amount (₹)</label><input id="a" type="number" min="1" max="50000" value="100" inputmode="numeric">
   <div class="chips">${[50,100,200,500,1000].map(x=>`<button type="button" data-v="${x}">₹${x}</button>`).join("")}</div>
+  <label>Aapka naam</label><input id="n" maxlength="30" placeholder="Stream pe dikhega">
   <label>Message (optional)</label><textarea id="m" rows="2" maxlength="120" placeholder="Stream pe dikhega"></textarea>
-  <button class="pri" id="go">Pay karo</button></div><div id="out"></div></div>
+  <button class="pri" id="go">Tip bhejo</button></div><div id="out"></div></div>
+  <div class="card" style="margin-top:12px"><b>Recent supporters</b><div id="rc" class="mut" style="margin-top:6px">Abhi koi tip nahi.</div></div>
   <div class="trust">Secure UPI payment. Paisa seedha creator ke UPI account mein jaata hai. Hum aapka UPI PIN ya bank details kabhi nahi maangte.</div><div id="tut"></div>`;
   document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>$("a").value=b.dataset.v);
   const tut=()=>{const v=String(cfg.tutorial||"").trim(),box=$("tut");if(!v){box.innerHTML="";return}
     box.innerHTML=`<div class="card"><button type="button" id="tb" style="width:100%">▶ Kaise tip karein? (video dekho)</button><div id="tv" style="margin-top:12px"></div></div>`;
     $("tb").onclick=()=>{const m=v.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)||v.match(/^([\w-]{11})$/);
-      if(/\.mp4$/i.test(v))$("tv").innerHTML=`<video src="${esc(v)}" controls playsinline autoplay style="width:100%;border-radius:12px"></video>`;
+      if(/^[\w.-]+\.mp4$/i.test(v))$("tv").innerHTML=`<video src="${esc(v)}" controls playsinline autoplay style="width:100%;border-radius:12px"></video>`;
       else if(m)$("tv").innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0" style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
       $("tb").style.display="none"}};
-  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};const n=cfg.name||"Creator";$("t").textContent=n+" ko tip karo";$("lg").innerHTML=cfg.photo?'<img src="'+esc(cfg.photo)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;border-radius:50%;object-fit:cover">':esc(n.trim().slice(0,1).toUpperCase());
-    document.body.dataset.th=cfg.themeMode||"auto";if(cfg.accent)document.body.style.setProperty("--ac",cfg.accent);document.title=n;tut()});
+  onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};const n=cfg.name||"Creator";$("t").textContent=n+" ko tip karo";$("wl").textContent=cfg.welcome||"Aapka support stream ko aage badhata hai";
+    $("lg").textContent="";if(cfg.photo&&/^https:\/\//.test(cfg.photo)){const im=document.createElement("img");im.referrerPolicy="no-referrer";im.src=cfg.photo;$("lg").appendChild(im)}else $("lg").textContent=n.trim().slice(0,1).toUpperCase();
+    document.body.dataset.th=cfg.themeMode||"auto";AC=/^#[0-9a-f]{6}$/i.test(cfg.accent||"")?cfg.accent:"#14b8a6";document.body.style.setProperty("--ac",AC);document.title=n;tut()});
+  onValue(query(ref(db,"pub/recent"),orderByChild("ts"),limitToLast(8)),s=>{const L=[];s.forEach(c=>{L.unshift(c.val())});const b=$("rc");b.textContent="";if(!L.length){b.textContent="Abhi koi tip nahi.";return}
+    L.forEach(a=>{const r=document.createElement("div");r.className="fd";const l=document.createElement("span");l.textContent=String(a.name||"").slice(0,30)+(a.msg?" — "+String(a.msg).slice(0,60):"");const m=document.createElement("b");m.textContent=inr(a.cents);r.append(l,m);b.appendChild(r)})});
   $("go").onclick=async()=>{
-    const o=$("out");if(!cfg.upi){o.innerHTML='<p class="mut">Setup abhi poora nahi hua.</p>';return}
-    const mn=Math.max(1,+cfg.minRs||10),rs=Math.floor(+$("a").value);if(!(rs>=mn&&rs<=50000)){o.innerHTML=`<p class="mut">Amount ₹${mn} se ₹50000 ke beech rakho.</p>`;return}
+    const o=$("out");if(!cfg.upi){o.textContent="Setup abhi poora nahi hua.";return}
+    const mn=Math.max(1,+cfg.minRs||10),rs=Math.floor(+$("a").value);if(!(rs>=mn&&rs<=50000)){o.textContent="Amount ₹"+mn+" se ₹50000 ke beech rakho.";return}
     $("go").disabled=true;
     try{
       const s=await get(query(ref(db,"pending"),orderByChild("ts"),startAt(Date.now()-WIN)));const used=new Set();s.forEach(c=>{used.add(c.val().cents)});
       let cents,i=0;do{cents=rs*100+1+Math.floor(Math.random()*99);i++}while(used.has(cents)&&i<200);
-      const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6),t0=Date.now();
+      const id=Date.now().toString(36)+Math.random().toString(36).slice(2,8),t0=Date.now();
       await set(ref(db,"pending/"+id),{name:($("n").value.trim()||"Anonymous").slice(0,30),msg:$("m").value.trim().slice(0,120),cents,ts:t0});
       const am=(cents/100).toFixed(2),url=`upi://pay?pa=${encodeURIComponent(cfg.upi)}&pn=${encodeURIComponent(cfg.name||"Creator")}&am=${am}&cu=INR&tn=Tip`;
       $("fm").style.display="none";
       o.innerHTML=`<div class="timer">Payment ke liye <b id="tm">10:00</b> bacha hai</div>
 <div class="stp"><i>1</i><div><small>UPI ID</small><b>${esc(cfg.upi)}</b></div><button type="button" id="cu">Copy</button></div>
 <div class="stp"><i>2</i><div><small>Exact amount (paise ke saath)</small><b>₹${am}</b></div><button type="button" id="ca">Copy</button></div>
-<div class="stp"><i>3</i><div><small>Ya QR scan karo</small></div></div><div id="qr"></div>
-<p class="mut">UPI app mein <b>UPI ID pe pay karo</b> chuno ya QR scan karo, aur exact amount hi bhejo. Paise isliye jude hain ki aapka naam aur message sahi payment se match ho. Payment ke 5-10 second baad stream pe alert aayega.</p>
+<div class="stp"><i>3</i><div><small>Ya QR scan karo</small></div><button type="button" id="dq">QR download</button></div><div id="qr"></div>
+<p class="mut">UPI app mein <b>UPI ID pe pay karo</b> chuno ya QR scan karo, aur exact amount hi bhejo. Paise isliye jude hain ki naam aur message sahi payment se match ho. Payment ke 5-10 second baad stream pe alert aayega.</p>
 <button type="button" id="nw" style="width:100%;background:var(--bd);color:var(--tx)">Naya tip banao</button>`;
       const cp=(t,b)=>{try{navigator.clipboard.writeText(t);b.textContent="Copy ho gaya ✓"}catch(e){prompt("Copy karo:",t)}};
       $("cu").onclick=e=>cp(cfg.upi,e.target);$("ca").onclick=e=>cp(am,e.target);$("nw").onclick=()=>{clearInterval(iv);o.innerHTML="";$("fm").style.display="block"};
-      new QRCode($("qr"),{text:url,width:190,height:190});
+      new QRCode($("qr"),{text:url,width:200,height:200});
+      $("dq").onclick=()=>{const c=document.querySelector("#qr canvas"),z=document.createElement("canvas");z.width=z.height=c.width+60;const g=z.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,z.width,z.height);g.drawImage(c,30,30);const l=document.createElement("a");l.download="tip-qr.png";l.href=z.toDataURL("image/png");l.click()};
       const iv=setInterval(()=>{const l=WIN-(Date.now()-t0);if(l<=0){clearInterval(iv);o.innerHTML='<p class="mut" style="margin-top:16px">Samay khatam ho gaya. Payment ke liye naya tip banao.</p><button class="pri" id="nw2">Naya tip banao</button>';$("nw2").onclick=()=>{o.innerHTML="";$("fm").style.display="block"};return}
         $("tm").textContent=String(Math.floor(l/6e4)).padStart(2,"0")+":"+String(Math.floor(l%6e4/1e3)).padStart(2,"0")},1000);
-    }catch(e){o.innerHTML='<p class="mut">Kuch gadbad hui, dobara try karo.</p>'}
+    }catch(e){o.textContent="Kuch gadbad hui, dobara try karo."}
     $("go").disabled=false};
 }
 </script></body></html>

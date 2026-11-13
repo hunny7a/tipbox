@@ -14,7 +14,7 @@ button{background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1c1917;font-weig
 <div><label>Minimum tip (₹)</label><input id="f_minRs" type="number"></div><div><label>Tutorial video (file ya YouTube link)</label><input id="f_tutorial"></div></div>
 <h2 style="margin-top:18px">Overlay, voice aur website theme</h2><div class="g2" id="adv"></div><label>Overlay secret key (OBS link ke liye)</label><input id="f_key"><button id="sv">Save</button><span id="ok" class="m"></span></div>
 <div class="c"><h2>OBS aur links</h2><div class="m">Overlay (OBS Browser Source):</div><code id="ou"></code><br><button class="g" id="co">Copy overlay link</button><button class="g" id="ct">Copy tip page link</button>
-<br><button class="g" id="ts">Test alert bhejo</button><button class="r" id="da">Saare alerts delete karo</button></div>
+<br><button class="g" id="ts">Test alert bhejo</button><button class="g" id="cl">Goal celebration test</button><button class="r" id="da">Saare alerts delete karo</button></div>
 <div class="c"><h2>Chat (sirf aapke liye, stream pe nahi dikhta)</h2><div id="ch" style="max-height:360px;overflow:auto"></div></div>
 <div class="c"><h2>Recent tips</h2><div id="rt"></div></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -50,6 +50,7 @@ $("sv").onclick=async()=>{const d={};F.forEach(k=>{const v=$("f_"+k).value.trim(
 $("rt").onclick=e=>{const b=e.target.closest("button[data-p]");if(b&&confirm("Status badlein?"))update(ref(db,"alerts/"+b.dataset.p),{status:b.dataset.s})};
 $("ng").onclick=()=>confirm("Goal counter 0 karein?")&&update(ref(db,"pub/cfg"),{goalBase:Date.now()});
 $("ts").onclick=()=>key&&set(ref(db,"alerts/"+key+"/test"+Date.now()),{name:"Test",msg:"Dashboard se test",cents:5037,ts:Date.now(),status:"test"});
+$("cl").onclick=()=>update(ref(db,"pub"),{celebrate:Date.now()});
 $("da").onclick=()=>confirm("Saare alerts (goal ka record) delete ho jaayenge. Pakka?")&&remove(ref(db,"alerts"));
 new QRCode($("qrb"),{text:new URL("index.html",location.href).href,width:220,height:220});
 $("dq").onclick=()=>{const c=document.querySelector("#qrb canvas"),z=document.createElement("canvas");z.width=z.height=c.width+80;const g=z.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,z.width,z.height);g.drawImage(c,40,40);const l=document.createElement("a");l.download="tip-qr.png";l.href=z.toDataURL("image/png");l.click()};

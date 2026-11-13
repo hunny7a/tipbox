@@ -43,8 +43,8 @@ body.pg{background:radial-gradient(900px 480px at 85% -10%,#b4530955,transparent
 .bn{border-radius:22px;overflow:hidden;background:var(--card);border:1px solid var(--bd);margin-bottom:12px}.cv{height:88px;background:linear-gradient(120deg,var(--ac),#ef4444 65%,#f472b6)}
 .id{display:flex;gap:14px;align-items:flex-end;padding:0 16px 16px;margin-top:-36px}.id .av{margin:0;flex:none;width:84px;height:84px;font-size:30px;border:4px solid var(--card)}.id h1{font-size:22px}.id p{margin:4px 0 0;color:var(--mut);font-size:13px}
 .pg input,.pg textarea{border-radius:14px;background:var(--bg)}.pri{border-radius:14px;background:linear-gradient(90deg,var(--ac),#ef4444);color:#1c1917}
-#cel{position:absolute;inset:0;pointer-events:none;overflow:hidden;display:grid;place-items:center}
-.cp{zoom:var(--k,1.75);background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1c1917;font-weight:800;padding:14px 22px;border-radius:18px;text-align:center;font-size:20px;animation:pop .6s cubic-bezier(.2,1.4,.4,1)}.cp small{display:block;font-size:13px;font-weight:600;margin-top:4px}
+#cel{position:fixed;inset:0;z-index:9;pointer-events:none;overflow:hidden;display:grid;place-items:center}
+.cp{zoom:var(--k,1.75);background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1c1917;font-weight:800;padding:14px 22px;border-radius:18px;text-align:center;font-size:30px;animation:pop .6s cubic-bezier(.2,1.4,.4,1)}.cp small{display:block;font-size:16px;font-weight:600;margin-top:4px}
 #cel i{position:absolute;bottom:-40px;font-style:normal;animation:rise 4s linear forwards}@keyframes pop{from{transform:scale(.3);opacity:0}}@keyframes rise{to{transform:translateY(-110vh) rotate(40deg);opacity:0}}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="ovr"><div id="stage"></div><div id="goalbar"></div></div>
@@ -95,7 +95,7 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};layout();bar()});
   const celebrate=()=>{if(voiceOnly)return;const e=document.createElement("div");e.id="cel";
     e.innerHTML='<div class="cp">🎉 GOAL POORA HO GAYA! 🎉<small>'+esc(cfg.goalTitle||"")+'</small></div>'+Array.from({length:26},(_,i)=>'<i style="left:'+(Math.random()*100)+'%;animation-delay:'+(Math.random()*1.5)+'s;font-size:'+(18+Math.random()*20)+'px">'+["🎉","₹","💸","✨"][i%4]+"</i>").join("");
-    $("ovr").appendChild(e);try{ding.currentTime=0;ding.play().catch(()=>{})}catch(x){}setTimeout(()=>e.remove(),9000)};
+    document.body.appendChild(e);try{ding.currentTime=0;ding.play().catch(()=>{})}catch(x){}setTimeout(()=>e.remove(),9000)};
   let c0=null;onValue(ref(db,"pub/celebrate"),s=>{const v=s.val();if(c0===null){c0=v||0;return}if(v&&v!==c0){c0=v;celebrate()}});
   const rows=[],drawChat=()=>{if(!chat)return;$("stage").innerHTML=rows.map(a=>'<div class="alert" style="margin-bottom:10px;animation:none"><div class="h" style="background:'+tier(a.cents)+'"><span>'+esc(cl(a.name).slice(0,30))+'</span><span>'+inr(a.cents)+'</span></div>'+(a.msg?'<div class="b">'+esc(cl(a.msg))+'</div>':"")+"</div>").join("")};
   const base=()=>+cfg.goalBase||0,seen=new Set(),cnt=a=>a.ts>=base()&&a.status!=="rejected"&&a.status!=="test";

@@ -92,7 +92,7 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
     $("stage").innerHTML="";busy=false;setTimeout(pump,400)};
   const layout=()=>{const k=+cfg.ovScale||1.75,o=$("ovr"),m=((cfg.ovMargin!=null)?+cfg.ovMargin:24)+"px";
     document.documentElement.style.setProperty("--k",k);o.style.width=(380*k)+"px";
-    o.style.top=((cfg.ovTop!=null)?+cfg.ovTop:165)+"px";o.style.bottom=((cfg.ovBottom!=null)?+cfg.ovBottom:24)+"px";
+    o.style.top=((cfg.ovTop!=null)?+cfg.ovTop:165)+"px";o.style.bottom=(((cfg.ovBottom!=null)?+cfg.ovBottom:24)+((cfg.qrSpace!=null)?+cfg.qrSpace:280))+"px";
     if(cfg.ovSide==="left"){o.style.left=m;o.style.right="auto"}else{o.style.right=m;o.style.left="auto"}};
   onValue(ref(db,"pub/cfg"),s=>{cfg=s.val()||{};layout();bar();showLast()});
   const dsec=a=>{const x=a.cents/100;return +(x<50?cfg.dur1:x<100?cfg.dur2:x<500?cfg.dur3:x<1000?cfg.dur4:cfg.dur5)||+cfg.minShow||10};

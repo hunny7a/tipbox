@@ -47,6 +47,7 @@ body.pg{background:radial-gradient(900px 480px at 85% -10%,#b4530955,transparent
 .cp{zoom:var(--k,1.75);background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1c1917;font-weight:800;padding:14px 22px;border-radius:18px;text-align:center;font-size:30px;animation:pop .6s cubic-bezier(.2,1.4,.4,1)}.cp small{display:block;font-size:16px;font-weight:600;margin-top:4px}
 #cel i{position:absolute;bottom:-40px;font-style:normal;animation:rise 4s linear forwards}@keyframes pop{from{transform:scale(.3);opacity:0}}@keyframes rise{to{transform:translateY(-110vh) rotate(40deg);opacity:0}}
 #last{display:none;zoom:var(--kg,2.2);width:292px;margin-bottom:4px;background:#000a;color:#fff;border-radius:12px;padding:8px 14px;font-weight:700;will-change:opacity;animation:fl 1.6s ease-in-out infinite}@keyframes fl{50%{opacity:.45}}
+label.ak{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--mut);margin:14px 0 0;line-height:1.5}.ak input{width:18px;height:18px;padding:0;margin-top:3px;flex:none}.ak a,.trust a{color:var(--ac)}.pri:disabled{opacity:.5;cursor:not-allowed}
 </style></head><body>
 <div class="wrap" id="app"></div><div id="ovr"><div id="stage"></div><div id="bt"><div id="last"></div><div id="goalbar"></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -118,9 +119,11 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
   <div class="chips">${[50,100,200,500,1000].map(x=>`<button type="button" data-v="${x}">₹${x}</button>`).join("")}</div>
   <label>Aapka naam (khali chhodo to UPI wala naam dikhega)</label><input id="n" maxlength="30" placeholder="Naam">
   <label>Message (optional)</label><textarea id="m" rows="2" maxlength="120" placeholder="Stream pe dikhega"></textarea>
-  <button class="pri" id="go">Tip bhejo</button></div><div id="out"></div></div>
-  <div class="trust">Secure UPI payment. Paisa seedha creator ke UPI account mein jaata hai. Hum aapka UPI PIN ya bank details kabhi nahi maangte.</div><div id="tut"></div>`;
+  <label class="ak"><input type="checkbox" id="ck"><span>Main maanta/maanti hoon ki ye tip <b>non-refundable</b> hai aur stream pe dikhne ke baad wapas nahi hoti. Main <a href="terms.html" target="_blank">Terms</a> aur <a href="terms.html#refund" target="_blank">Refund Policy</a> se sehmat hoon.</span></label>
+  <button class="pri" id="go" disabled>Tip bhejo</button></div><div id="out"></div></div>
+  <div class="trust">Secure UPI payment. Paisa seedha creator ke UPI account mein jaata hai. Hum aapka UPI PIN ya bank details kabhi nahi maangte. Madad ke liye: <a href="mailto:batvhelp@gmail.com" style="color:inherit">batvhelp@gmail.com</a></div><div id="tut"></div>`;
   document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>$("a").value=b.dataset.v);
+  $("ck").onchange=()=>{$("go").disabled=!$("ck").checked};
   const tut=()=>{const v=String(cfg.tutorial||"").trim(),box=$("tut");if(!v){box.innerHTML="";return}
     box.innerHTML=`<div class="card"><button type="button" id="tb" style="width:100%">▶ Kaise tip karein? (video dekho)</button><div id="tv" style="margin-top:12px"></div></div>`;
     $("tb").onclick=()=>{const m=v.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)||v.match(/^([\w-]{11})$/);
@@ -132,6 +135,7 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
     document.body.dataset.th=cfg.themeMode||"auto";AC=/^#[0-9a-f]{6}$/i.test(cfg.accent||"")?cfg.accent:"#f59e0b";document.body.style.setProperty("--ac",AC);document.title=n+" • Live Tips";fav(cfg.photo);tut()});
   $("go").onclick=async()=>{
     const o=$("out");if(!cfg.upi){o.textContent="Setup abhi poora nahi hua.";return}
+    if(!$("ck").checked){o.textContent="Pehle non-refundable wala box tick karo.";return}
     const mn=Math.max(1,+cfg.minRs||10),rs=Math.floor(+$("a").value);if(!(rs>=mn&&rs<=50000)){o.textContent="Amount ₹"+mn+" se ₹50000 ke beech rakho.";return}
     $("go").disabled=true;
     try{
@@ -148,12 +152,12 @@ if(isOv){ // ---------- overlay: #overlay/SECRET  |  /novoice (OBS)  |  /voiceon
 <p class="mut">UPI app mein <b>UPI ID pe pay karo</b> chuno ya QR scan karo, aur exact amount hi bhejo. Paise isliye jude hain ki naam aur message sahi payment se match ho. Payment ke 5-10 second baad stream pe alert aayega.</p>
 <button type="button" id="nw" style="width:100%;background:var(--bd);color:var(--tx)">Naya tip banao</button>`;
       const cp=(t,b)=>{try{navigator.clipboard.writeText(t);b.textContent="Copy ho gaya ✓"}catch(e){prompt("Copy karo:",t)}};
-      $("cu").onclick=e=>cp(cfg.upi,e.target);$("ca").onclick=e=>cp(am,e.target);$("nw").onclick=()=>{clearInterval(iv);o.innerHTML="";$("fm").style.display="block";STOP=false};
+      $("cu").onclick=e=>cp(cfg.upi,e.target);$("ca").onclick=e=>cp(am,e.target);$("nw").onclick=()=>{clearInterval(iv);o.innerHTML="";$("fm").style.display="block";STOP=false;$("ck").checked=false;$("go").disabled=true};
       new QRCode($("qr"),{text:url,width:200,height:200});
       $("dq").onclick=()=>{const c=document.querySelector("#qr canvas"),z=document.createElement("canvas");z.width=z.height=c.width+60;const g=z.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,z.width,z.height);g.drawImage(c,30,30);const l=document.createElement("a");l.download="tip-qr.png";l.href=z.toDataURL("image/png");l.click()};
-      const iv=setInterval(()=>{const l=WIN-(Date.now()-t0);if(l<=0){clearInterval(iv);o.innerHTML='<p class="mut" style="margin-top:16px">Samay khatam ho gaya. Payment ke liye naya tip banao.</p><button class="pri" id="nw2">Naya tip banao</button>';$("nw2").onclick=()=>{o.innerHTML="";$("fm").style.display="block";STOP=false};return}
+      const iv=setInterval(()=>{const l=WIN-(Date.now()-t0);if(l<=0){clearInterval(iv);o.innerHTML='<p class="mut" style="margin-top:16px">Samay khatam ho gaya. Payment ke liye naya tip banao.</p><button class="pri" id="nw2">Naya tip banao</button>';$("nw2").onclick=()=>{o.innerHTML="";$("fm").style.display="block";STOP=false;$("ck").checked=false;$("go").disabled=true};return}
         $("tm").textContent=String(Math.floor(l/6e4)).padStart(2,"0")+":"+String(Math.floor(l%6e4/1e3)).padStart(2,"0")},1000);
     }catch(e){o.textContent="Kuch gadbad hui, dobara try karo."}
-    $("go").disabled=false};
+    $("go").disabled=!$("ck").checked};
 }
 </script></body></html>
